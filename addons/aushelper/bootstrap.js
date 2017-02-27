@@ -167,6 +167,7 @@ function startup() {
   if (REPLACE_KEY_REGEX.test(curValue)) {
     let newValue = curValue.replace(REPLACE_KEY_REGEX, REPLACE_KEY + cpuValue + websenseValue + "/");
     branch.setCharPref(APP_UPDATE_URL_PREF, newValue);
+    TelemetryLog.log("WEBSENSE_MODIFIED", [newValue]);
   } else {
     TelemetryLog.log("WEBSENSE_ALREADY_MODIFIED", [curValue]);
   }
