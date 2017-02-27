@@ -13,6 +13,7 @@
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 const APP_UPDATE_URL_PREF = "app.update.url";
+const PREF_DEFAULTS_RESET_TOPIC = "prefservice:after-app-defaults";
 const REPLACE_KEY = "%OS_VERSION%";
 const REPLACE_KEY_REGEX = /%OS_VERSION%(?:\(\w+Bug1296630v1\))?(?:\(websense\)|\(nowebsense\))?\//;
 
@@ -27,6 +28,8 @@ const CPU_UNKNOWN_BUG1296630 = 3;
 
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/TelemetryLog.jsm");
+
+let observer = null;
 
 function startup() {
   if (Services.appinfo.OS != "WINNT") {
@@ -171,7 +174,29 @@ function startup() {
   } else {
     TelemetryLog.log("WEBSENSE_ALREADY_MODIFIED", [curValue]);
   }
+
+  observer = {
+    observe(subject, topic, data) {
+      switch (topic) {
+        case "prefservice:after-app-defaults":
+          TelemetryLog.log("WEBSENSE_DEFAULT_PREFS_RESET");
+          break;
+        case "nsPref:changed":
+          let prefValue = branch.getCharPref(APP_UPDATE_URL_PREF);
+          TelemetryLog.log("WEBSENSE_PREF_CHANGED", [prefValue]);
+          break;
+      }
+    }
+  };
+
+  Services.obs.addObserver(observer, PREF_DEFAULTS_RESET_TOPIC, false);
+  Services.prefs.addObserver(APP_UPDATE_URL_PREF, observer, false);
 }
-function shutdown() {}
+
+function shutdown() {
+  Services.obs.removeObserver(observer, PREF_DEFAULTS_RESET_TOPIC);
+  Services.prefs.removeObserver(APP_UPDATE_URL_PREF, observer);
+}
+
 function install() {}
 function uninstall() {}
